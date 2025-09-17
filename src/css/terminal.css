@@ -1,0 +1,14 @@
+body {
+	background: #1E1E1E;
+  color: #FFF;
+}
+.terminal-input {
+    border: none;
+    background: #1E1E1E;
+    color: #FFF;
+    font: 16px 'CustomTerminalFont', monospace;
+    outline: none;
+    box-shadow: none;
+    caret-color: transparent;
+    position: relative;
+}
