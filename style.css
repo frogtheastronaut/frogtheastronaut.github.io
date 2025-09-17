@@ -1,0 +1,47 @@
+/*
+Everything here should be in catpuccin theme
+it is the best theme
+*/
+
+body {
+	background-color: #1e1e2e; /* Base */
+	color: #cdd6f4; /* Text */
+	margin: 0;
+	padding: 20px;
+}
+
+#canvas {
+	font-family: 'Courier New', Courier, monospace;
+	line-height: 1.2;
+	white-space: pre;
+	color: #dc8a78;
+}
+#hi {
+	color: #1e1e2e;
+}
+
+a {
+	color: #89b4fa; /* Blue */
+	text-decoration: none;
+}
+
+/* Button is centered in the middle */
+button {
+	background-color: #89b4fa; /* Blue */
+	color: #1e1e2e; /* Base */
+	border: none;
+	padding: 10px 20px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 16px;
+	display: block;
+	margin: 20px auto;
+	transition: background-color 0.3s;
+}
+
+.button-corner {
+	color: #5c5f77;
+}
+.button-edge {
+	color: #89b4fa; /* Blue */
+}
