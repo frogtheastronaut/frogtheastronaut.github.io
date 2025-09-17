@@ -11,36 +11,87 @@ Hi! Welcome to my terminal emulator. This is an emulation of my Mac's terminal.<
 Some, but not all commands are supported. The folders contain information on my projects.<br>
 `;
 
-// Simple in-memory filesystem emulation
+// Generic, publicly available Unix/Mac root filesystem structure
 const fsRoot = {
   type: 'dir',
-  name: '~',
+  name: '/',
   children: {
-    projects: {
+    bin: { type: 'dir', name: 'bin', children: {} },
+    sbin: { type: 'dir', name: 'sbin', children: {} },
+    etc: { type: 'dir', name: 'etc', children: {
+      'passwd': { type: 'file', name: 'passwd', content: '' },
+      'hosts': { type: 'file', name: 'hosts', content: '' },
+      'profile': { type: 'file', name: 'profile', content: '' },
+      'group': { type: 'file', name: 'group', content: '' }
+    }},
+    usr: {
       type: 'dir',
-      name: 'projects',
-      children: { }
+      name: 'usr',
+      children: {
+        bin: { type: 'dir', name: 'bin', children: {} },
+        sbin: { type: 'dir', name: 'sbin', children: {} },
+        lib: { type: 'dir', name: 'lib', children: {} },
+        include: { type: 'dir', name: 'include', children: {} },
+        share: { type: 'dir', name: 'share', children: {} },
+        local: {
+          type: 'dir',
+          name: 'local',
+          children: {
+            bin: { type: 'dir', name: 'bin', children: {} },
+            share: { type: 'dir', name: 'share', children: {} }
+          }
+        }
+      }
     },
-    "README.txt": {
-      type: 'file',
-      name: 'README.txt',
-      content: 'Welcome to the projects directory! This is a placeholder file.'
+    var: {
+      type: 'dir',
+      name: 'var',
+      children: {
+        log: { type: 'dir', name: 'log', children: {} },
+        tmp: { type: 'dir', name: 'tmp', children: {} },
+        spool: { type: 'dir', name: 'spool', children: {} }
+      }
     },
-    ".zshrc": {
-      type: 'file',
-      name: '.zshrc',
-      content: `# ~/.zshrc 
+    tmp: { type: 'dir', name: 'tmp', children: {} },
+    dev: { type: 'dir', name: 'dev', children: {
+      'null': { type: 'file', name: 'null', content: '' },
+      'zero': { type: 'file', name: 'zero', content: '' }
+    }},
+    home: {
+      type: 'dir',
+      name: 'home',
+      children: {
 
-      echo ""
-      echo "Hi! Welcome to my terminal emulator. This is an emulation of my Mac's terminal."
-      echo "Some, but not all commands are supported. The folders contain information on my projects."
-      echo ""
-      `
-    }
+      }
+    },
+    System: { type: 'dir', name: 'System', children: {} },
+    Applications: { type: 'dir', name: 'Applications', children: {} },
+    Library: { type: 'dir', name: 'Library', children: {} },
+    Users: { type: 'dir', name: 'Users', children: {
+      'user': { type: 'dir', name: 'user', children: { 
+                projects: { type: 'dir', name: 'projects', children: {} },
+        "README.txt": { type: 'file', name: 'README.txt', content: 'Welcome to the projects directory! This is a placeholder file.' },
+        ".zshrc": { type: 'file', name: '.zshrc', content: `# ~/.zshrc
+echo ""
+echo "Hi! Welcome to my terminal emulator. This is an emulation of my Mac's terminal."
+echo "Some, but not all commands are supported. The folders contain information on my projects."
+echo ""\n` }
+          }
+        }
+      }
+    },
+    Volumes: { type: 'dir', name: 'Volumes', children: {} },
+    opt: { type: 'dir', name: 'opt', children: {} },
+    mnt: { type: 'dir', name: 'mnt', children: {} },
+    private: { type: 'dir', name: 'private', children: {} },
+    cores: { type: 'dir', name: 'cores', children: {} },
+    network: { type: 'dir', name: 'network', children: {} },
+    tmp: { type: 'dir', name: 'tmp', children: {} }
+    // Add more folders/files as needed!
   }
 };
 
-let fsCurrentPath = ['~'];
+let fsCurrentPath = ['/']; // Start at root
 
 function processPrompt() {
   // Remove the block cursor before processing
@@ -56,26 +107,24 @@ function resolvePath(pathStr) {
   // Returns [node, error] for a given path string
   if (!pathStr) return [getCurrentDirNode(), null];
   let parts = pathStr.trim().split('/').filter(Boolean);
-  let node;
-  let current;
-  // Absolute path from root (~)
+
+  // Absolute path: start from root
+  let node, current;
   if (pathStr.startsWith('/')) {
-    // Prevent access to /
-    if (parts.length === 0) {
-      return [null, 'cd: permission denied: /'];
-    }
     node = fsRoot;
-    current = ['~'];
+    current = ['/'];
   } else {
     node = getCurrentDirNode();
     current = fsCurrentPath.slice();
   }
+
   for (let part of parts) {
     if (part === '.') continue;
     if (part === '..') {
-      // Prevent going above ~
       if (current.length <= 1) {
-        return [null, 'cd: permission denied: ..'];
+        current = ['/'];
+        node = fsRoot;
+        continue;
       }
       current.pop();
       node = getNodeFromPath(current);
@@ -92,6 +141,8 @@ function resolvePath(pathStr) {
 
 function getNodeFromPath(pathArr) {
   let node = fsRoot;
+  // If root, just return fsRoot
+  if (pathArr.length === 1 && pathArr[0] === '/') return fsRoot;
   for (let i = 1; i < pathArr.length; i++) {
     let part = pathArr[i];
     if (!node.children || !node.children[part]) return null;
@@ -104,22 +155,6 @@ function getCurrentDirNode() {
   return getNodeFromPath(fsCurrentPath);
 }
 
-function isPermissionDenied(pathStr) {
-  // Deny any path that tries to go above ~
-  if (!pathStr) return false;
-  let parts = pathStr.trim().split('/');
-  let depth = fsCurrentPath.length;
-  for (let part of parts) {
-    if (part === '' || part === '.') continue;
-    if (part === '..') {
-      depth--;
-      if (depth < 1) return true;
-    } else {
-      depth++;
-    }
-  }
-  return false;
-}
 function processCommand(cmd) {
   let input = cmd.trim();
   if (input === '') return '';
@@ -135,12 +170,12 @@ function processCommand(cmd) {
   // echo
   if (input.startsWith('echo ')) {
     let arg = input.slice(5).trim();
-    return arg; // macOS echo never errors, it just prints
+    return arg;
   }
 
   // pwd
   if (input === 'pwd') {
-    return '/' + fsCurrentPath.slice(1).join('/');
+    return fsCurrentPath.length === 1 ? '/' : '/' + fsCurrentPath.slice(1).join('/');
   }
 
   // ls
@@ -161,12 +196,7 @@ function processCommand(cmd) {
     let arg = input.slice(2).trim();
 
     if (!arg) {
-      fsCurrentPath = ['~']; // cd with no args goes to home
-      return '';
-    }
-
-    if (arg === '/') {
-      fsCurrentPath = ['~']; // sandbox: treat / as home (~)
+      fsCurrentPath = ['/'];
       return '';
     }
 
@@ -174,13 +204,15 @@ function processCommand(cmd) {
     if (err) return `cd: no such file or directory: ${arg}`;
     if (target.type !== 'dir') return `cd: not a directory: ${arg}`;
 
-    // update working directory
-    let parts = arg.startsWith('/') ? ['~'] : fsCurrentPath.slice();
+    let parts = fsCurrentPath.slice();
     let argParts = arg.split('/').filter(Boolean);
     for (let part of argParts) {
       if (part === '.') continue;
       if (part === '..') {
-        if (parts.length <= 1) return `cd: no such file or directory: ${arg}`;
+        if (parts.length <= 1) {
+          parts = ['/'];
+          continue;
+        }
         parts.pop();
         continue;
       }
@@ -249,7 +281,14 @@ function processCommand(cmd) {
 
 
 function getPromptHTML(pathArr) {
-  return `projects@ethans-mac-emulator ` + (pathArr ? pathArr.join('/') : fsCurrentPath.join('/')) + ' %';
+  // Show / for root, otherwise /subdir/subdir
+  let path = '/';
+  if (pathArr && pathArr.length > 1) {
+    path = '/' + pathArr.slice(1).join('/');
+  } else if (!pathArr && fsCurrentPath.length > 1) {
+    path = '/' + fsCurrentPath.slice(1).join('/');
+  }
+  return `projects@ethans-mac-emulator ${path} %`;
 }
 
 function renderFakeInput() {
